@@ -109,6 +109,7 @@ def main():
     # Use CUDA
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
     use_cuda = torch.cuda.is_available()
+    gpu_num = len(args.gpu_id.split(','))
 
     # Random seed
     if args.manual_seed is None:
@@ -135,23 +136,12 @@ def main():
         print("=> creating model '{}'".format(args.arch))
         model = models.__dict__[args.arch]()
 
-    if not args.distributed:
-        if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-            model.features = torch.nn.DataParallel(model.features)
-            model.cuda()
-        else:
-            model = torch.nn.DataParallel(model).cuda()
-    else:
-        model.cuda()
-        model = torch.nn.parallel.DistributedDataParallel(model)
-
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
 
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
-
     # optionally resume from a checkpoint
     title = 'CelebA-' + args.arch
     if not os.path.isdir(args.checkpoint):
@@ -174,6 +164,17 @@ def main():
     else:
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title)
         logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.'])
+
+
+    if not args.distributed:
+        if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
+            model.features = torch.nn.DataParallel(model.features)
+            model.cuda()
+        else:
+            model = torch.nn.DataParallel(model).cuda()
+    else:
+        model.cuda()
+        model = torch.nn.parallel.DistributedDataParallel(model)
 
 
     cudnn.benchmark = True
@@ -246,13 +247,16 @@ def main():
         #for name, param in model.named_parameters():
         #    writer.add_histogram(name, param.clone().cpu().data.numpy(), epoch + 1)
 
-
         is_best = prec1 > best_prec1
         best_prec1 = max(prec1, best_prec1)
+        if use_cuda and gpu_num > 0:
+            state_dict = model.module.state_dict()
+        else:
+            state_dict = model.state_dict()
         save_checkpoint({
             'epoch': epoch + 1,
             'arch': args.arch,
-            'state_dict': model.state_dict(),
+            'state_dict': state_dict,
             'best_prec1': best_prec1,
             'optimizer' : optimizer.state_dict(),
         }, is_best, checkpoint=args.checkpoint)
