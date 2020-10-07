@@ -101,6 +101,7 @@ def main():
     args = parser.parse_args()
 
     args.distributed = args.world_size > 1
+    args.checkpoint = os.path.join(args.checkpoint, args.arch)
 
     if args.distributed:
         dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url,
