@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
@@ -207,7 +208,8 @@ def init_pretrained_weights(model, model_url):
     Initialize model with pretrained weights.
     Layers that don't match with pretrained layers in name or size are kept unchanged.
     """
-    pretrain_dict = model_zoo.load_url(model_url)
+    pretrain_dict = torch.load('pretrained_weights/resnet50-19c8e357.pth')
+    # pretrain_dict = model_zoo.load_url(model_url)
     model_dict = model.state_dict()
     pretrain_dict = {k: v for k, v in pretrain_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
     model_dict.update(pretrain_dict)

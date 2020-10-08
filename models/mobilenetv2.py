@@ -184,7 +184,8 @@ def init_pretrained_weights(model, path=os.path.expanduser('~/.torch/models/mobi
     Layers that don't match with pretrained layers in name or size are kept unchanged.
     """
     #pretrain_dict = model_zoo.load_url(model_url)
-    pretrain_dict = torch.load(path)
+    # pretrain_dict = torch.load(path)
+    pretrain_dict = torch.load('pretrained_weights/mobilenet_v2-b0353104.pth')
     model_dict = model.state_dict()
     pretrain_dict = {k: v for k, v in pretrain_dict.items() if k in model_dict and model_dict[k].size() == v.size()}
     model_dict.update(pretrain_dict)
