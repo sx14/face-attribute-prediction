@@ -1,4 +1,6 @@
 data/
+test/
+
 .idea/
 *.jpg
 *.pth

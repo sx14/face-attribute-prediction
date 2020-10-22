@@ -35,7 +35,7 @@ def get_recognizer_model(checkpoint_path):
     return model
 
 
-def recognize_attributes(face_image, model):
+def recognize_attributes(face_image, model, use_gpu=False):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
@@ -45,7 +45,10 @@ def recognize_attributes(face_image, model):
     face_image = Image.fromarray(face_image)
     input = data_transforms(face_image)
     input = input.unsqueeze(0)
+    if use_gpu:
+        input = input.cuda()
     output = model(input)
+    output = [item.cpu() for item in output]
     res = [F.softmax(item)[0][1].item() for item in output]
     return res
 
