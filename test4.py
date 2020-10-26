@@ -127,16 +127,16 @@ def main(video_list_path, res_root, use_gpu=False):
                 line = '%s %s\n' % (fids[i].split('.')[0], ' '.join(results[i]))
                 f.writelines(line)
 
-            logger.write('%s\n' % vid)
-            logger.flush()
-
-        logger.write('%s done!' % video_list_path)
+        logger.write('%s\n' % vid)
         logger.flush()
-        logger.close()
+
+    logger.write('%s done!' % video_list_path)
+    logger.flush()
+    logger.close()
 
 
 if __name__ == '__main__':
-    video_list_path = 'test/data/4.0/xxyb-frame.txt'
+    video_list_path = 'test/data/4.0/xxyb-frame-1.txt'
     res_root = 'test/res/4.0/face_attribute'
     initialize(use_gpu=True)
     main(video_list_path, res_root, use_gpu=True)
