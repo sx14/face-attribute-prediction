@@ -1,0 +1,13 @@
+RUNTIME python3
+# 这里的/share/cat_dog路径设置要和template.yml里的MountDir一致
+RUN fun-install pip install flask==1.1.1 -t /share/face_attr
+RUN fun-install pip install numpy==1.19.1 -t /share/face_attr
+RUN fun-install pip install opencv-python==4.1.0.25 -t /share/face_attr
+RUN fun-install pip install Pillow==6.2.1 -t /share/face_attr
+RUN fun-install pip install torchvision==0.2.2 -t /share/face_attr
+RUN fun-install pip install torch==0.4.0 -t /share/face_attr
+
+
+
+COPY ./detection/onnx/onnx /share/face_attr/detection/onnx/onnx/
+COPY ./checkpoints /share/face_attr/checkpoints/

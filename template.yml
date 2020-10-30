@@ -1,0 +1,45 @@
+ROSTemplateFormatVersion: '2015-09-01'
+Transform: 'Aliyun::Serverless-2018-04-03'
+Resources:
+  face_attr:
+    Type: 'Aliyun::Serverless::Service'
+    Properties:
+      Policies:
+        - AliyunECSNetworkInterfaceManagementAccess
+      VpcConfig:
+        VpcId: vpc-uf6jopxsvdbptph0j23rl
+        VSwitchIds:
+          - vsw-uf67wt6c7qfz7w128q2vz
+        SecurityGroupId: sg-uf67c1zfyx7xspx0rl9m
+      NasConfig:
+        UserId: 10010
+        GroupId: 10010
+        MountPoints:
+          - ServerAddr: >-
+              039cef30-vlyq.cn-shanghai.extreme.nas.aliyuncs.com:/share/face_attr
+            MountDir: /share/face_attr
+    face_attr:
+      Type: 'Aliyun::Serverless::Function'
+      Properties:
+        Initializer: main.initializer
+        InitializationTimeout: 300
+        Handler: main.handler
+        Runtime: python3
+        CodeUri: ./
+        EnvironmentVariables:
+          det_model_path: /share/face_attr/detection/onnx/onnx/version-RFB-320_simplified.onnx
+          rec_model_path: /share/face_attr/checkpoints/resnet50/model_best_fix.pth.tar
+          log_root: /share/face_attr/logs
+          PYTHONUSERBASE: /share/face_attr/python
+        Timeout: 120
+        MemorySize: 3072
+      Events:
+        http-test:
+          Type: HTTP
+          Properties:
+            Qualifier: LATEST
+            AuthType: ANONYMOUS
+            Methods:
+              - GET
+              - POST
+              - PUT

@@ -29,7 +29,7 @@ model_names = sorted(name for name in models.__dict__
 
 def get_recognizer_model(checkpoint_path):
     model = models.__dict__['resnet50'](pretrained=False)
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
     model.load_state_dict(checkpoint['state_dict'])
     model.eval()
     return model
