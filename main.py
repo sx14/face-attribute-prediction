@@ -71,8 +71,8 @@ def get_input(file):
     return img
 
 
-def process_body(body: str):
-    body = json.loads(body)
+def process_body(body):
+    # body = json.loads(body)
     return body['image']
 
 
