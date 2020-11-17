@@ -1,7 +1,10 @@
 # coding=utf-8
 import os
+import json
 import time
+import base64
 import logging
+from io import StringIO
 
 import cv2
 import numpy as np
@@ -30,14 +33,6 @@ def initializer(context):
     rec_model_path = os.environ.get("rec_model_path")
     rec_net = get_recognizer_model(rec_model_path)
     det_net = get_detection_model(det_model_path)
-
-    # 初始化日志
-    log_root = os.environ.get("log_root")
-    if not os.path.exists(log_root):
-        os.mkdir(log_root)
-    log_path = os.path.join(log_root, 'log-%s.txt' % time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime()))
-    logging.basicConfig(filename=log_path, level=logging.INFO)
-    logging.log(logging.INFO, 'Service init success.')
 
 
 # 验证后缀名
@@ -70,13 +65,36 @@ def get_input(file):
     从文件流中读出图像
     :return: numpy, RGB image
     """
-    try:
-        file_stream = file.stream.read()
-        img = cv2.imdecode(np.frombuffer(file_stream, np.uint8), cv2.IMREAD_COLOR)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        return img
-    except Exception:
-        return None
+    file_stream = file.stream.read()
+    img = cv2.imdecode(np.frombuffer(file_stream, np.uint8), cv2.IMREAD_COLOR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return img
+
+
+def process_body(body: str):
+    body = json.loads(body)
+    return body['image']
+
+
+def decode_img_from_b64(str_encode: str):
+    """
+    将上传的图片解码为cv2.imread()的格式
+    :param str_encode: 由encode_img编码的字符串
+    :return: cv2读取的一帧格式
+    """
+    img_decode = base64.b64decode(str_encode)
+    img_decode = np.fromstring(img_decode, np.uint8)
+    img = cv2.imdecode(img_decode, cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    return img
+
+
+def get_logger():
+    log_stream = StringIO()
+    logger = logging.getLogger('app')
+    handler = logging.StreamHandler(log_stream)
+    logger.addHandler(handler)
+    return logger, log_stream
 
 
 def crop_face(face_box, image, ratio=5.0):
@@ -124,24 +142,43 @@ def crop_face(face_box, image, ratio=5.0):
     return face_img
 
 
-def main(file):
-    image = get_input(file)
+def main(body):
+    logger, log_stream = get_logger()
 
-    if image is None:
-        logging.log(logging.ERROR, 'Bad image stream: %s' % file.filename)
-        result = str('bad image')
-        return result
+    image = None
+    success = False
+    data = None
 
-    face_box = detect_face(image, det_net)
-    if face_box is None:
-        logging.log(logging.WARNING, 'No face detected: %s' % file.filename)
-        result = str('face not found')
-        return result
+    try:
+        file = process_body(body)
+    except Exception:
+        file = None
+        logger.error('bad request body!', exc_info=True, stack_info=True)
 
-    face_image = crop_face(face_box, image, 2.4)
-    attr_probs = recognize_attributes(face_image, rec_net)
-    res = ['%.4f' % prob for prob in attr_probs]
-    return ' '.join(res)
+    if file is not None:
+        try:
+            image = decode_img_from_b64(file)
+        except Exception:
+            logger.error('bad image!', exc_info=True, stack_info=True)
+
+    if image is not None:
+        try:
+            face_box = detect_face(image, det_net)
+            if face_box is None:
+                logger.error('no face detected!')
+            else:
+                face_image = crop_face(face_box, image, 2.4)
+                attr_probs = recognize_attributes(face_image, rec_net)
+                res = ['%.4f' % prob for prob in attr_probs]
+                data = ' '.join(res)
+                success = True
+        except Exception:
+            logger.error('model runtime error!', exc_info=True, stack_info=True)
+
+    res = {'data': data,
+           'success': success,
+           'log': log_stream.getvalue()}
+    return res
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -150,17 +187,8 @@ def home():
 
         # check if the post request has the file part
         # 请求形式是 POST，类型是 form-data，file 字段对应一个图片文件
-        if 'file' not in request.files:
-            return "no picture, please upload"
-        file = request.files['file']
-        if not file:
-            return "no picture, please upload"
-        # 读出文件流
-        if allowed_file(file.filename):
-            # 把图片和 context 传给 predict
-            return main(file)
-        else:
-            return "picture format must be jpg"
+        body = request.get_json()
+        return main(body)
     else:
         return 'request method must be POST'
 
