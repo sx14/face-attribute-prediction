@@ -1,6 +1,6 @@
 data/
 test/
-
+.fun/
 .idea/
 *.jpg
 *.pth
