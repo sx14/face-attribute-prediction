@@ -7,5 +7,5 @@ url = 'https://1889584630546789.cn-shanghai.fc.aliyuncs.com/2016-08-15/proxy/fac
 with open("imgs/1.jpg", 'rb') as f:
     base64_data = base64.b64encode(f.read())
 data = {"image": base64_data.decode()}
-res = requests.post(url=url, json=json.dumps(data))
+res = requests.post(url=url, json=data)
 print(res.text)
